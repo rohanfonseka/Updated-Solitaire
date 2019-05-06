@@ -1,0 +1,7 @@
+#BlueJ class context
+comment0.target=SolitaireSimulation
+comment0.text=\n\ This\ is\ a\ class\ that\ plays\ noninteractive\ games\ of\ Elevens.\n\ See\ accompanying\ documents\ for\ a\ description\ of\ how\ Elevens\ is\ played.\n
+comment1.params=args
+comment1.target=void\ main(java.lang.String[])
+comment1.text=\n\ @param\ args\ is\ not\ used.\n
+numComments=2
