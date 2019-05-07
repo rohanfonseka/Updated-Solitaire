@@ -72,8 +72,14 @@ public class SolitaireBoard extends Board {
             //System.out.println("cIndexes: " + cIndexes);
         }
         return findStackingMove(cIndexes).size() > 0
-        || findFoundationMove(cIndexes).getX() != -1;
+        || findFoundationMove(cIndexes).getX() != -1
+        || findDealMove(cIndexes).getX() != -1;
              //|| findJQK(cIndexes).size() > 0;
+    }
+    
+    public boolean dealMoveIsPossible() {
+        List<Point> cIndexes = cardIndexes();
+        return findDealMove(cIndexes).getX() != -1 && canDeal();
     }
 
     /**
@@ -100,6 +106,34 @@ public class SolitaireBoard extends Board {
             }
         }
         return new Point(-1,-1);
+    }
+    
+    public Point findDealMove(List<Point> selectedCards) {
+        for (int tCard = 0; tCard < selectedCards.size(); tCard++) {
+            int r = (int) selectedCards.get(tCard).getX();
+            int c = (int) selectedCards.get(tCard).getY();
+            if (tabCardAt(r,c).pointValue() - dCardAt().pointValue() == 1) {
+                if ((tabCardAt(r, c).suit() == "hearts"
+                || tabCardAt(r, c).suit() == "diamonds")
+                && (dCardAt().suit() == "spades"
+                || dCardAt().suit() == "clubs")) {
+                    return new Point(r-1,c);
+                } else if ((dCardAt().suit() == "hearts"
+                || dCardAt().suit() == "diamonds")
+                && (tabCardAt(r, c).suit() == "spades"
+                || tabCardAt(r, c).suit() == "clubs")) {
+                    return new Point(r-1,c);
+                }
+            }
+        }
+        return new Point(-1,-1);
+    }
+    
+    public boolean canDeal() {
+        if (deckSize() != 0) {
+            return true;
+        }
+        return false;
     }
     
     public boolean canMoveToFoundation(int r, int c, int fPile) {
@@ -143,16 +177,16 @@ public class SolitaireBoard extends Board {
             if (I_AM_DEBUGGING)
                 //System.out.println("After opsuit/diffRow check: r1, c1, r2, c2: " + r1 + " " + c1 + " " + r2 + " " + c2);
             if ((tabCardAt(r1, c1).pointValue() - tabCardAt(r2, c2).pointValue() == 1)
-            && tabCardAt(r1 + 1, c1) == null) {
+            && tabCardAt(r1 - 1, c1) == null) {
                 intentCoords.add(new Point(r2,c2));
                 //^coords of "move"; aka smaller
-                intentCoords.add(new Point(r1+1,c1));
+                intentCoords.add(new Point(r1,c1));
                 //^coords of "target"; aka one below larger
             } else if ((tabCardAt(r2, c2).pointValue() - tabCardAt(r1, c1).pointValue() == 1)
-            && tabCardAt(r2 + 1, c2) == null) {
+            && tabCardAt(r2 - 1, c2) == null) {
                 intentCoords.add(new Point(r1,c1));
                 //^coords of "move"; aka smaller
-                intentCoords.add(new Point(r2+1,c2));
+                intentCoords.add(new Point(r2,c2));
                 //^coords of "target"; aka one below larger
             }
         }

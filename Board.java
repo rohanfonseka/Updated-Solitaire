@@ -15,6 +15,8 @@ public abstract class Board {
     private Card[][] tableau;
     
     private ArrayList<ArrayList<Card>> foundation;
+    
+    private ArrayList<Card> deckPile;
 
     /**
      * The deck of cards being used to play the current game.
@@ -39,6 +41,7 @@ public abstract class Board {
         int rows = 12;
         tableau = new Card[rows][columns];
         foundation = new ArrayList<ArrayList<Card>>();
+        deckPile = new ArrayList<Card>();
         for (int fPile = 0; fPile < 4; fPile++) {
             foundation.add(new ArrayList<Card>());
         }
@@ -98,16 +101,24 @@ public abstract class Board {
      * If the deck is empty, the kth card is set to null.
      * @param k the index of the card to be dealt.
      */
-    public void deal(int r, int c) {
-        if (r == 0) {
+    public void deal(int r, int c, boolean flag) {
+        if (r == 11 || flag) {
             tableau[r][c] = deck.deal();
         } else {
-            tabSetCard(null, r, c);
+            tableau[r][c] = null;
         }
+    }
+    
+    public void deal() {
+        deckPile.add(deck.deal());
     }
     
     public void tabSetCard(Card move, int r, int c) {
         tableau[r][c] = move;
+    }
+    
+    public void deckReset() {
+        deckPile.clear();
     }
     
     public void fAddCard(Card move, int fPileIndex) {
@@ -149,6 +160,15 @@ public abstract class Board {
         }
     }
     
+    public Card dCardAt() {
+        try {
+            return deckPile.get(deckPile.size()-1);
+        }
+        catch (ArrayIndexOutOfBoundsException e){
+            return null;
+        }
+    }
+    
     public boolean tabHasCard(int r, int c) {
         if (tabCardAt(r,c) != null)
             return true;
@@ -165,14 +185,14 @@ public abstract class Board {
         int cMove = (int) selectedCards.get(0).getY();
         int rTarget = (int) selectedCards.get(1).getX();
         int cTarget = (int) selectedCards.get(1).getY();
-        tableau[rTarget + 1][cTarget] = tabCardAt(rMove, cMove);
-        deal(rMove, cMove);
+        tableau[rTarget - 1][cTarget] = tabCardAt(rMove, cMove);
+        deal(rMove, cMove, false);
         if(I_AM_DEBUGGING)
             //System.out.println(tabCardAt(0,0) + "\n" + tabCardAt(1,0));
-        for (int r = 1; r < tabColSize() - rMove; r++) {
-            if (tabHasCard(r, cMove)) {
-                tableau[rTarget + 1 + r][cTarget] = tabCardAt(r, cMove);
-                deal(r, cMove);
+        for (int r = 1; r <= rMove; r++) {
+            if (tabHasCard(rMove - r, cMove)) {
+                tableau[rTarget - 1 - r][cTarget] = tabCardAt(rMove - r, cMove);
+                deal(rMove - r, cMove, false);
             }
         }
     }
@@ -180,7 +200,12 @@ public abstract class Board {
     public void moveCardToFoundation(int r, int c, int fPile) {
         Card move = tabCardAt(r,c);
         foundation.get(fPile).add(move);
-        deal(r,c);
+        deal(r,c, false);
+    }
+    
+    public void moveDeckCardToTableau(int r, int c) {
+        tabSetCard(dCardAt(), r, c);
+        deal();
     }
 
     /**
@@ -252,6 +277,10 @@ public abstract class Board {
     public abstract boolean anotherPlayIsPossible();
     
     public abstract boolean canMoveToFoundation(int r, int c, int fPile);
+    
+    public abstract boolean canDeal();
+    
+    public abstract boolean dealMoveIsPossible();
 
     /**
      * Deal cards to this board to start the game.
@@ -259,7 +288,7 @@ public abstract class Board {
     private void dealMyCards() {
         for (int r = 0; r < tableau.length; r++) {
             for (int c = 0; c < tableau[0].length; c++) {
-                if (r == 0)
+                if (r == 11)
                     tableau[r][c] = deck.deal();
                 else
                     tableau[r][c] = null;

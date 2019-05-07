@@ -63,6 +63,8 @@ public class CardGameGUI extends JFrame implements ActionListener {
     private JButton replaceButton;
     /** The Restart button. */
     private JButton restartButton;
+    /** The Deal button. */
+    private JButton dealButton;
     /** The "number of undealt cards remain" message. */
     private JLabel statusMsg;
     /** The "you've won n out of m games" message. */
@@ -71,6 +73,8 @@ public class CardGameGUI extends JFrame implements ActionListener {
     private JLabel[][] tDisplayCards;
     /** The card displays for foundation. */
     private JLabel[] fDisplayCards;
+    /** The card displays for deck. */
+    private JLabel dDisplayCards;
     /** The win message. */
     private JLabel winMsg;
     /** The loss message. */
@@ -79,6 +83,8 @@ public class CardGameGUI extends JFrame implements ActionListener {
     private Point[][] tCardCoords;
     /** The coordinates of the card displays on foundation. */
     private Point[] fCardCoords;
+    /** The coordinates of the card display on deck. */
+    private Point dCardCoords;
     
 
     /** kth element is true iff the user has selected card #k. */
@@ -121,13 +127,16 @@ public class CardGameGUI extends JFrame implements ActionListener {
             }
         }
         
-        // Initialize fcardCoords using 7 cards per row
+        // Initialize fCardCoords using 4 cards per row
         fCardCoords = new Point[4];
         for (int fPileIndex = 0; fPileIndex < 4; fPileIndex++) {
             x = LAYOUT_LEFT + LAYOUT_WIDTH_INC * fPileIndex;
             y = LAYOUT_TOP;
             fCardCoords[fPileIndex] = new Point(x, y);
         }
+        
+        // Initialize dCardCoords
+        dCardCoords = new Point(LAYOUT_LEFT, 700 - LAYOUT_TOP);
 
         selections = new int[board.tabRowSize()][board.tabColSize()];
         initDisplay();
@@ -198,6 +207,19 @@ public class CardGameGUI extends JFrame implements ActionListener {
             }
         }
         
+        String cardImageFileName =
+                imageFileName(board.dCardAt(), 0);
+                URL imageURL = getClass().getResource(cardImageFileName);
+        if (imageURL != null) {
+                ImageIcon icon = new ImageIcon(imageURL);
+                dDisplayCards.setIcon(icon);
+                dDisplayCards.setVisible(true);
+            } else {
+                throw new RuntimeException(
+                "Card image not found: \""
+                + cardImageFileName + "\"");
+            }
+        
         statusMsg.setText(board.deckSize()
             + " undealt cards remain.");
         statusMsg.setVisible(true);
@@ -267,6 +289,12 @@ public class CardGameGUI extends JFrame implements ActionListener {
                                 CARD_WIDTH, CARD_HEIGHT);
             fDisplayCards[fPileIndex].addMouseListener(new MyMouseListener());
         }
+        dDisplayCards = new JLabel();
+        panel.add(dDisplayCards);
+        dDisplayCards.setBounds(dCardCoords.x, dCardCoords.y,
+                                CARD_WIDTH, CARD_HEIGHT);
+        dDisplayCards.addMouseListener(new MyMouseListener());
+        
         replaceButton = new JButton();
         replaceButton.setText("Replace");
         panel.add(replaceButton);
@@ -279,14 +307,21 @@ public class CardGameGUI extends JFrame implements ActionListener {
         restartButton.setBounds(BUTTON_LEFT, BUTTON_TOP + BUTTON_HEIGHT_INC,
                                         100, 30);
         restartButton.addActionListener(this);
+        
+        dealButton = new JButton();
+        dealButton.setText("Deal");
+        panel.add(dealButton);
+        dealButton.setBounds(BUTTON_LEFT, BUTTON_TOP + 2 * BUTTON_HEIGHT_INC,
+                                        100, 30);
+        dealButton.addActionListener(this);
 
         statusMsg = new JLabel(
             board.deckSize() + " undealt cards remain.");
         panel.add(statusMsg);
-        statusMsg.setBounds(LABEL_LEFT, LABEL_TOP, 250, 30);
+        statusMsg.setBounds(LABEL_LEFT, LABEL_TOP + BUTTON_HEIGHT_INC, 250, 30);
 
         winMsg = new JLabel();
-        winMsg.setBounds(LABEL_LEFT, LABEL_TOP + LABEL_HEIGHT_INC, 200, 30);
+        winMsg.setBounds(LABEL_LEFT, LABEL_TOP + LABEL_HEIGHT_INC + BUTTON_HEIGHT_INC, 200, 30);
         winMsg.setFont(new Font("SansSerif", Font.BOLD, 25));
         winMsg.setForeground(Color.GREEN);
         winMsg.setText("You win!");
@@ -294,7 +329,7 @@ public class CardGameGUI extends JFrame implements ActionListener {
         winMsg.setVisible(false);
 
         lossMsg = new JLabel();
-        lossMsg.setBounds(LABEL_LEFT, LABEL_TOP + LABEL_HEIGHT_INC, 200, 30);
+        lossMsg.setBounds(LABEL_LEFT, LABEL_TOP + LABEL_HEIGHT_INC + BUTTON_HEIGHT_INC, 200, 30);
         lossMsg.setFont(new Font("SanSerif", Font.BOLD, 25));
         lossMsg.setForeground(Color.RED);
         lossMsg.setText("Sorry, you lose.");
@@ -303,7 +338,7 @@ public class CardGameGUI extends JFrame implements ActionListener {
 
         totalsMsg = new JLabel("You've won " + totalWins
             + " out of " + totalGames + " games.");
-        totalsMsg.setBounds(LABEL_LEFT, LABEL_TOP + 2 * LABEL_HEIGHT_INC,
+        totalsMsg.setBounds(LABEL_LEFT, LABEL_TOP + 2 * LABEL_HEIGHT_INC + BUTTON_HEIGHT_INC,
                                   250, 30);
         panel.add(totalsMsg);
 
@@ -411,6 +446,10 @@ public class CardGameGUI extends JFrame implements ActionListener {
             for (int fPileIndex = 0; fPileIndex < 4; fPileIndex++) {
                 board.fPileReset(fPileIndex);
             }
+            board.deckReset();
+            repaint();
+        } else if (e.getSource().equals(dealButton)) {
+            board.deal();
             repaint();
         } else {
             signalError();
@@ -451,6 +490,14 @@ public class CardGameGUI extends JFrame implements ActionListener {
             for (int r = 0; r < board.tabRowSize(); r++) {
                 for (int c = 0; c < board.tabColSize(); c++) {
                     if (board.tabCardAt(r,c) != null) {
+                        if (e.getSource().equals(dDisplayCards)) {
+                                if (selections[r][c] != 0
+                                && has1(selections)
+                                && !has2(selections)
+                                && board.dealMoveIsPossible()) {
+                                    board.moveDeckCardToTableau(r-1,c);
+                                }
+                            }
                         for (int fPileIndex = 0; fPileIndex < 4; fPileIndex++) {
                             if (e.getSource().equals(fDisplayCards[fPileIndex])) {
                                 if (selections[r][c] != 0
