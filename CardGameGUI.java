@@ -60,7 +60,7 @@ public class CardGameGUI extends JFrame implements ActionListener {
     /** The main panel containing the game components. */
     private JPanel panel;
     /** The Replace button. */
-    private JButton replaceButton;
+    private JButton moveButton;
     /** The Restart button. */
     private JButton restartButton;
     /** The Deal button. */
@@ -295,11 +295,11 @@ public class CardGameGUI extends JFrame implements ActionListener {
                                 CARD_WIDTH, CARD_HEIGHT);
         dDisplayCards.addMouseListener(new MyMouseListener());
         
-        replaceButton = new JButton();
-        replaceButton.setText("Replace");
-        panel.add(replaceButton);
-        replaceButton.setBounds(BUTTON_LEFT, BUTTON_TOP, 100, 30);
-        replaceButton.addActionListener(this);
+        moveButton = new JButton();
+        moveButton.setText("Move");
+        panel.add(moveButton);
+        moveButton.setBounds(BUTTON_LEFT, BUTTON_TOP, 100, 30);
+        moveButton.addActionListener(this);
 
         restartButton = new JButton();
         restartButton.setText("Restart");
@@ -348,7 +348,7 @@ public class CardGameGUI extends JFrame implements ActionListener {
 
         pack();
         getContentPane().add(panel);
-        getRootPane().setDefaultButton(replaceButton);
+        getRootPane().setDefaultButton(moveButton);
         panel.setVisible(true);
     }
 
@@ -389,7 +389,7 @@ public class CardGameGUI extends JFrame implements ActionListener {
      * @param e the button click action event
      */
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource().equals(replaceButton)) {
+        if (e.getSource().equals(moveButton)) {
             // Gather all the selected cards.
             List<Point> selection = new ArrayList<Point>();
             for (int r = 0; r < board.tabRowSize(); r++) {
@@ -431,7 +431,7 @@ public class CardGameGUI extends JFrame implements ActionListener {
             repaint();
         } else if (e.getSource().equals(restartButton)) {
             board.newGame();
-            getRootPane().setDefaultButton(replaceButton);
+            getRootPane().setDefaultButton(moveButton);
             winMsg.setVisible(false);
             lossMsg.setVisible(false);
             if (!board.anotherPlayIsPossible()) {
@@ -489,48 +489,143 @@ public class CardGameGUI extends JFrame implements ActionListener {
         public void mouseClicked(MouseEvent e) {
             for (int r = 0; r < board.tabRowSize(); r++) {
                 for (int c = 0; c < board.tabColSize(); c++) {
-                    if (board.tabCardAt(r,c) != null) {
-                        if (e.getSource().equals(dDisplayCards)) {
-                                if (selections[r][c] != 0
-                                && has1(selections)
-                                && !has2(selections)
-                                && board.dealMoveIsPossible()) {
+                    for (int fPileIndex = 0; fPileIndex < 4; fPileIndex++) {
+                        if (e.getSource().equals(dDisplayCards) 
+                        && board.tabCardAt(r,c) != null) {
+                            if (I_AM_DEBUGGING) {
+                                //System.out.println(board.tabCardAt(r,c));
+                                //System.out.println(selections[r][c]);
+                                //System.out.println(r + " " + c);
+                            }
+                            if (!has2(selections) && board.dealMoveIsPossibleAt(r,c)) {
+                                /**
+                                 * Following boolean moves card from deal to tableau given:
+                                 * - a selected card in selections
+                                 * - if selections only has one selected card
+                                 * - if a move from deal to tableau pile is possible
+                                 */
+                                if (selections[r][c] == 1) {
+                                    //if (I_AM_DEBUGGING) {
+                                        //System.out.println(board.tabCardAt(r,c));
+                                        //System.out.println(selections[r][c]);
+                                    //}
                                     board.moveDeckCardToTableau(r-1,c);
+                                    selections[r][c] = 0;
+                                    repaint();
+                                    return;
                                 }
                             }
-                        for (int fPileIndex = 0; fPileIndex < 4; fPileIndex++) {
-                            if (e.getSource().equals(fDisplayCards[fPileIndex])) {
-                                if (selections[r][c] != 0
-                                && has1(selections)
-                                && !has2(selections)
-                                && board.canMoveToFoundation(r,c,fPileIndex))
+                        } else if (e.getSource().equals(fDisplayCards[fPileIndex])
+                        && board.tabCardAt(r,c) != null) {
+                            if (!has2(selections)) {
+                                if (I_AM_DEBUGGING) {
+                                    //System.out.println("fPileIndex: " + fPileIndex);
+                                    //System.out.println(selections[r][c] != 0);
+                                    //System.out.println(has1(selections));
+                                    //System.out.println(!has2(selections));
+                                    //System.out.println(board.canMoveToFoundation(r,c,fPileIndex));
+                                }
+                                /**
+                                 * Following boolean moves card from tableau to
+                                 * foundation given:
+                                 * - a selected card in selections
+                                 * - if selections only has one selected card
+                                 * - if a move from tableau to foundation is possible
+                                 */
+                                if (selections[r][c] == 1
+                                && board.canMoveToFoundation(r,c,fPileIndex)) {
+                                    if (I_AM_DEBUGGING)
+                                        System.out.println("fPileIndex: " + fPileIndex);
                                     board.moveCardToFoundation(r, c, fPileIndex);
+                                    selections[r][c] = 0;
+                                    repaint();
+                                    return;
+                                }
+                                /**
+                                 * Following boolean moves card from deck to
+                                 * foundation given:
+                                 * - there is a card on the deck
+                                 * - if selections only has one selected card
+                                 * - if a move from tableau to foundation is possible
+                                 */
+                                else if (board.dCardAt() != null
+                                && ((board.dCardAt().pointValue() == 1
+                                && board.fCardAt(fPileIndex) == null)
+                                || (board.fCardAt(fPileIndex).pointValue()
+                                - board.dCardAt().pointValue() == 1))) {
+                                    board.moveDeckCardToFoundation(fPileIndex);
+                                    repaint();
+                                    return;
+                                }
+                            } else if (board.dCardAt() != null) {
+                                /**
+                                 * Following boolean moves card from deck to foundation
+                                 * given either:
+                                 * -deck card is an Ace and foundation pile is blank
+                                 * OR
+                                 * -foundation card is one less than deck card and deck
+                                 * card suit matches the foundation pile suit
+                                 */
+                                if(board.dCardAt().pointValue() == 1
+                                && board.fCardAt(fPileIndex) == null) {
+                                    board.moveDeckCardToFoundation(fPileIndex);
+                                    repaint();
+                                    return;
+                                } else if (board.fCardAt(fPileIndex).pointValue()
+                                - board.dCardAt().pointValue() == 1
+                                && board.fCardAt(fPileIndex).suit()
+                                == board.dCardAt().suit()
+                                && board.fCardAt(fPileIndex) != null) {
+                                    board.moveDeckCardToFoundation(fPileIndex);
+                                    repaint();
+                                    return;
+                                }
                             }
-                        }
-                        if (e.getSource().equals(tDisplayCards[r][c])) {
+                        } else if (e.getSource().equals(tDisplayCards[r][c])) {
                             boolean selectionHas2 = has2(selections);
                             boolean selectionHas1 = has1(selections);
-                            if(selections[r][c] == 0) {
+                            if(r == 11
+                            && board.tabCardAt(r,c) == null
+                            && board.dCardAt().pointValue() == 13) {
+                                board.tabSetCard(board.dCardAt(),r,c);
+                                board.rmvDeckTopCard();
+                                repaint();
+                                return;
+                            } else if(selections[r][c] == 0
+                            && board.tabCardAt(r,c) != null) {
                                 if (!selectionHas1) {
+                                    if (I_AM_DEBUGGING) {
+                                        System.out.println(selections[r][c]);
+                                    }
                                     selections[r][c] = 1;
+                                    repaint();
+                                    return;
                                 } else if (!selectionHas2 && selectionHas1) {
                                     setSmaller1Greater2(selections, r, c);
+                                    repaint();
+                                    return;
                                 }
-                            } else if(selections[r][c] == 1){
-                                if (!selectionHas2)
-                                selections[r][c] = 0;
-                                if (selectionHas2) {
+                            } else if(selections[r][c] == 1
+                            && board.tabCardAt(r,c) != null){
+                                if (!selectionHas2) {
+                                    selections[r][c] = 0;
+                                    repaint();
+                                    return;
+                                } else if (selectionHas2) {
                                     selections[r][c] = 0;
                                     if2Make1(selections);
+                                    repaint();
+                                    return;
                                 }
-                            } else if(selections[r][c] == 2) {
+                            } else if(selections[r][c] == 2
+                            && board.tabCardAt(r,c) != null) {
                                 selections[r][c] = 0;
+                                repaint();
+                                return;
                             }
-                            repaint();
                             if (I_AM_DEBUGGING) {
                                 System.out.println(board.tabCardAt(r,c));
                             }
-                            return;
                         }
                     }
                 }
@@ -557,16 +652,21 @@ public class CardGameGUI extends JFrame implements ActionListener {
             for (int r1 = 0; r1 < board.tabRowSize(); r1++) {
                 for (int c1 = 0; c1 < board.tabColSize(); c1++) {
                     if(selections[r1][c1] == 1) {
-                        if(board.tabCardAt(r1,c1).pointValue()
-                        > board.tabCardAt(r,c).pointValue()) {
-                            selections[r][c] = 1;
-                            selections[r1][c1] = 2;
-                            return;
-                        } else if(board.tabCardAt(r,c).pointValue()
-                        > board.tabCardAt(r1,c1).pointValue()) {
-                            selections[r][c] = 2;
-                            return;
-                        }
+                        //try {
+                            if(board.tabCardAt(r1,c1).pointValue()
+                            > board.tabCardAt(r,c).pointValue()) {
+                                selections[r][c] = 1;
+                                selections[r1][c1] = 2;
+                                return;
+                            } else if(board.tabCardAt(r,c).pointValue()
+                            > board.tabCardAt(r1,c1).pointValue()) {
+                                selections[r][c] = 2;
+                                return;
+                            }
+                        //} catch (NullPointerException e) {
+                            //System.out.println(selections[r][c]);
+                            //System.out.println(selections[r1][c1]);
+                        //}
                     }
                 }
             }

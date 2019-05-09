@@ -17,6 +17,8 @@ public abstract class Board {
     private ArrayList<ArrayList<Card>> foundation;
     
     private ArrayList<Card> deckPile;
+    
+    private int[] tPiles;
 
     /**
      * The deck of cards being used to play the current game.
@@ -40,10 +42,17 @@ public abstract class Board {
         int columns = 7;
         int rows = 12;
         tableau = new Card[rows][columns];
-        foundation = new ArrayList<ArrayList<Card>>();
+        foundation = new ArrayList<ArrayList<Card>>(4);
         deckPile = new ArrayList<Card>();
+        tPiles = new int[7];
         for (int fPile = 0; fPile < 4; fPile++) {
             foundation.add(new ArrayList<Card>());
+        }
+        for (int tPileIndex = 0; tPileIndex < 7; tPileIndex++) {
+            tPiles[tPileIndex] = tPileIndex +1;
+            if (I_AM_DEBUGGING) {
+                //System.out.println(tPiles[tPileIndex-1]);
+            }
         }
         deck = new Deck(ranks, suits, pointValues);
         if (I_AM_DEBUGGING) {
@@ -102,15 +111,26 @@ public abstract class Board {
      * @param k the index of the card to be dealt.
      */
     public void deal(int r, int c, boolean flag) {
-        if (r == 11 || flag) {
+        if (I_AM_DEBUGGING) {
+            //System.out.println("tPiles[c]: " + tPiles[c]);
+            System.out.println("c: " + c);
+        }
+        if (tPiles[c] > 1 && (r == 11 || flag)) {
             tableau[r][c] = deck.deal();
+            tPiles[c] -= 1;
         } else {
             tableau[r][c] = null;
         }
     }
     
     public void deal() {
-        deckPile.add(deck.deal());
+        if (deck.size() > 0) {
+            deckPile.add(deck.deal());
+        }
+    }
+    
+    public void rmvDeckTopCard() {
+        deckPile.remove(deckPile.size()-1);
     }
     
     public void tabSetCard(Card move, int r, int c) {
@@ -186,6 +206,7 @@ public abstract class Board {
         int rTarget = (int) selectedCards.get(1).getX();
         int cTarget = (int) selectedCards.get(1).getY();
         tableau[rTarget - 1][cTarget] = tabCardAt(rMove, cMove);
+        System.out.println("cMove: " + cMove);
         deal(rMove, cMove, false);
         if(I_AM_DEBUGGING)
             //System.out.println(tabCardAt(0,0) + "\n" + tabCardAt(1,0));
@@ -205,7 +226,12 @@ public abstract class Board {
     
     public void moveDeckCardToTableau(int r, int c) {
         tabSetCard(dCardAt(), r, c);
-        deal();
+        rmvDeckTopCard();
+    }
+    
+    public void moveDeckCardToFoundation(int fPileIndex) {
+        fAddCard(dCardAt(), fPileIndex);
+        rmvDeckTopCard();
     }
 
     /**
@@ -279,6 +305,8 @@ public abstract class Board {
     public abstract boolean canMoveToFoundation(int r, int c, int fPile);
     
     public abstract boolean canDeal();
+    
+    public abstract boolean dealMoveIsPossibleAt(int r, int c);
     
     public abstract boolean dealMoveIsPossible();
 

@@ -73,15 +73,24 @@ public class SolitaireBoard extends Board {
         }
         return findStackingMove(cIndexes).size() > 0
         || findFoundationMove(cIndexes).getX() != -1
-        || findDealMove(cIndexes).getX() != -1;
+        || findDealMove(cIndexes).getX() != -1
+        || canDeal();
              //|| findJQK(cIndexes).size() > 0;
     }
     
-    public boolean dealMoveIsPossible() {
-        List<Point> cIndexes = cardIndexes();
-        return findDealMove(cIndexes).getX() != -1 && canDeal();
+    public boolean dealMoveIsPossibleAt(int r, int c) {
+        if (OpSuit(r,c) && OneLess(r,c)) {
+            return true;
+        }
+        return false;
     }
 
+    public boolean dealMoveIsPossible() {
+        List<Point> cIndexes = cardIndexes();
+        return findDealMove(cIndexes).getX() != -1 || canDeal();
+    }
+    
+    
     /**
      * Look for an 11-pair in the selected cards.
      * @param selectedCards selects a subset of this board.  It is list
@@ -112,7 +121,8 @@ public class SolitaireBoard extends Board {
         for (int tCard = 0; tCard < selectedCards.size(); tCard++) {
             int r = (int) selectedCards.get(tCard).getX();
             int c = (int) selectedCards.get(tCard).getY();
-            if (tabCardAt(r,c).pointValue() - dCardAt().pointValue() == 1) {
+            if (tabCardAt(r,c) != null && dCardAt() != null
+            && tabCardAt(r,c).pointValue() - dCardAt().pointValue() == 1) {
                 if ((tabCardAt(r, c).suit() == "hearts"
                 || tabCardAt(r, c).suit() == "diamonds")
                 && (dCardAt().suit() == "spades"
@@ -137,8 +147,15 @@ public class SolitaireBoard extends Board {
     }
     
     public boolean canMoveToFoundation(int r, int c, int fPile) {
+        if(I_AM_DEBUGGING) {
+            //System.out.println("foundation card: " + fCardAt(fPile) + "\n" + 
+            //"tableau card: " + tabCardAt(r,c));
+        }
         if (tabCardAt(r,c).pointValue() == 1
         && fCardAt(fPile) == null) {
+            if(I_AM_DEBUGGING)
+                //System.out.println("foundation card: " + fCardAt(fPile) + "\n" + 
+                //"tableau card: " + tabCardAt(r,c));
             return true;
         } else if (fCardAt(fPile) != null
         && sameSuit(r,c,fPile)
@@ -208,6 +225,21 @@ public class SolitaireBoard extends Board {
         return false;
     }
     
+    private boolean OpSuit(int r, int c) {
+        if ((tabCardAt(r, c).suit() == "hearts"
+        || tabCardAt(r, c).suit() == "diamonds")
+        && (dCardAt().suit() == "spades"
+        || dCardAt().suit() == "clubs")) {
+            return true;
+        } else if ((dCardAt().suit() == "hearts"
+        || dCardAt().suit() == "diamonds")
+        && (tabCardAt(r, c).suit() == "spades"
+        || tabCardAt(r, c).suit() == "clubs")) {
+            return true;
+        }
+        return false;
+    }
+    
     private boolean sameSuit(int r, int c, int fPile) {
         if (tabCardAt(r,c).suit() == fCardAt(fPile).suit()) {
             return true;
@@ -217,6 +249,13 @@ public class SolitaireBoard extends Board {
     
     private boolean oneLess(int r, int c, int fPile) {
         if (tabCardAt(r,c).pointValue() - fCardAt(fPile).pointValue() == 1) {
+            return true;
+        }
+        return false;
+    }
+    
+    private boolean OneLess(int r, int c) {
+        if (tabCardAt(r,c).pointValue() - dCardAt().pointValue() == 1) {
             return true;
         }
         return false;
